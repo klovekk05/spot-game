@@ -1,0 +1,15 @@
+{
+  "stages": {
+    "1": {
+      "leftImage": "https://images.unsplash.com/photo-1546182990-dffeafbe841d?w=600&q=80",
+      "rightImage": "https://images.unsplash.com/photo-1546182990-dffeafbe841d?w=600&q=80",
+      "differences": [
+        { "id": 1, "x": 90, "y": 80, "r": 28 },
+        { "id": 2, "x": 320, "y": 90, "r": 28 },
+        { "id": 3, "x": 200, "y": 200, "r": 28 },
+        { "id": 4, "x": 100, "y": 320, "r": 28 },
+        { "id": 5, "x": 310, "y": 310, "r": 28 }
+      ]
+    }
+  }
+}
