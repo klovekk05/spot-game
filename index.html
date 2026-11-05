@@ -1,73 +1,72 @@
-!DOCTYPE html
-html lang=ko
-head
-  meta charset=UTF-8
-  meta name=viewport content=width=device-width, initial-scale=1.0
-  title온라인 틀린 그림 찾기 게임title
-  style
-     { box-sizing border-box; margin 0; padding 0; }
-    body { font-family sans-serif; background #fdf6ec; display flex; flex-direction column; align-items center; min-height 100vh; padding 10px; }
-    header { width 100%; max-width 900px; display flex; justify-content space-between; align-items center; padding 10px 0; }
-    .badge { background #ff4757; color white; padding 6px 16px; border-radius 20px; font-weight bold; font-size 18px; }
-    .score { font-size 18px; font-weight bold; }
-    .score span { color #ff4757; font-size 24px; }
-    .btn { padding 8px 14px; background white; border 2px solid #ddd; border-radius 10px; font-weight bold; cursor pointer; }
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>온라인 틀린 그림 찾기 게임</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: sans-serif; background: #fdf6ec; display: flex; flex-direction: column; align-items: center; min-height: 100vh; padding: 10px; }
+    header { width: 100%; max-width: 900px; display: flex; justify-content: space-between; align-items: center; padding: 10px 0; }
+    .badge { background: #ff4757; color: white; padding: 6px 16px; border-radius: 20px; font-weight: bold; font-size: 18px; }
+    .score { font-size: 18px; font-weight: bold; }
+    .score span { color: #ff4757; font-size: 24px; }
+    .btn { padding: 8px 14px; background: white; border: 2px solid #ddd; border-radius: 10px; font-weight: bold; cursor: pointer; }
     
-    .game-board { display flex; gap 16px; margin-top 10px; background white; padding 16px; border-radius 20px; box-shadow 0 4px 20px rgba(0,0,0,0.06); }
-    .card { position relative; width 420px; height 420px; border-radius 12px; overflow hidden; border 3px solid #eee; cursor crosshair; }
-    canvas { position absolute; top0; left0; width100%; height100%; }
-    .label { position absolute; top10px; left10px; background rgba(0,0,0,0.6); colorwhite; padding4px 8px; border-radius6px; font-size12px; pointer-events none; }
+    .game-board { display: flex; gap: 16px; margin-top: 10px; background: white; padding: 16px; border-radius: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.06); }
+    .card { position: relative; width: 420px; height: 420px; border-radius: 12px; overflow: hidden; border: 3px solid #eee; cursor: crosshair; }
+    canvas { position: absolute; top:0; left:0; width:100%; height:100%; }
+    .label { position: absolute; top:10px; left:10px; background: rgba(0,0,0,0.6); color:white; padding:4px 8px; border-radius:6px; font-size:12px; pointer-events: none; }
 
-    .timer-wrap { width 100%; max-width 870px; height 18px; background #e0d6c3; border-radius 9px; margin-top 15px; position relative; }
-    .timer-fill { height 100%; width 100%; background #ffa502; border-radius 9px; transition width 0.1s linear; }
-    .timer-ele { position absolute; top -20px; left 100%; transform translateX(-50%); font-size 26px; transition left 0.1s linear; }
+    .timer-wrap { width: 100%; max-width: 870px; height: 18px; background: #e0d6c3; border-radius: 9px; margin-top: 15px; position: relative; }
+    .timer-fill { height: 100%; width: 100%; background: #ffa502; border-radius: 9px; transition: width 0.1s linear; }
+    .timer-ele { position: absolute; top: -20px; left: 100%; transform: translateX(-50%); font-size: 26px; transition: left 0.1s linear; }
 
-    .popup { display none; position fixed; top 50%; left 50%; transform translate(-50%, -50%); background white; padding 30px 50px; border-radius 20px; box-shadow 0 10px 30px rgba(0,0,0,0.2); text-align center; }
-  style
-head
-body
+    .popup { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 30px 50px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); text-align: center; }
+  </style>
+</head>
+<body>
 
-  header
-    div class=badge id=stageBadge1단계div
-    div class=score남은 곳 span id=remainCount5span  5div
-    div
-      button class=btn id=bgmBtn🎵 BGMbutton
-      a href=admin.html class=btn style=text-decorationnone; colorblack;⚙️ 관리자 모드a
-    div
-  header
+  <header>
+    <div class="badge" id="stageBadge">1단계</div>
+    <div class="score">남은 곳: <span id="remainCount">5</span> / 5</div>
+    <div>
+      <button class="btn" id="bgmBtn">🎵 BGM</button>
+      <a href="admin.html" class="btn" style="text-decoration:none; color:black;">⚙️ 관리자 모드</a>
+    </div>
+  </header>
 
-  div class=game-board
-    div class=card
-      div class=label원본 (Left)div
-      canvas id=lView width=420 height=420canvas
-      canvas id=lEff width=420 height=420canvas
-    div
-    div class=card
-      div class=label틀린그림 (Right)div
-      canvas id=rView width=420 height=420canvas
-      canvas id=rEff width=420 height=420canvas
-    div
-  div
+  <div class="game-board">
+    <div class="card">
+      <div class="label">원본 (Left)</div>
+      <canvas id="lView" width="420" height="420"></canvas>
+      <canvas id="lEff" width="420" height="420"></canvas>
+    </div>
+    <div class="card">
+      <div class="label">틀린그림 (Right)</div>
+      <canvas id="rView" width="420" height="420"></canvas>
+      <canvas id="rEff" width="420" height="420"></canvas>
+    </div>
+  </div>
 
-  div class=timer-wrap
-    div class=timer-fill id=timerFilldiv
-    div class=timer-ele id=timerEle🐘div
-  div
+  <div class="timer-wrap">
+    <div class="timer-fill" id="timerFill"></div>
+    <div class="timer-ele" id="timerEle">🐘</div>
+  </div>
 
-  div class=popup id=clearPopup
-    h2 style=color#ff4757; margin-bottom 8px;참 잘했어요! 🎉h2
-    p5곳을 모두 찾았습니다!p
-    button class=btn style=background#ff4757; colorwhite; margin-top14px; id=nextBtn다음 단계 도전button
-  div
+  <div class="popup" id="clearPopup">
+    <h2 style="color:#ff4757; margin-bottom: 8px;">참 잘했어요! 🎉</h2>
+    <p>5곳을 모두 찾았습니다!</p>
+    <button class="btn" style="background:#ff4757; color:white; margin-top:14px;" id="nextBtn">다음 단계 도전</button>
+  </div>
 
-  script
-     사운드 시스템 (외부 파일 불필요)
+  <script>
     let audioCtx = null;
     let isBgm = false;
     let bgmId = null;
 
     function getAudio() {
-      if (!audioCtx) audioCtx = new (window.AudioContext  window.webkitAudioContext)();
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
       if (audioCtx.state === 'suspended') audioCtx.resume();
       return audioCtx;
     }
@@ -83,16 +82,16 @@ body
         osc.start(); osc.stop(ctx.currentTime + d);
       } catch(e){}
     }
-    const playOk = () = { beep(523, 0.1); setTimeout(() = beep(659, 0.1), 70); setTimeout(() = beep(783, 0.2), 140); };
-    const playNo = () = beep(160, 0.2, 'sawtooth');
+    const playOk = () => { beep(523, 0.1); setTimeout(() => beep(659, 0.1), 70); setTimeout(() => beep(783, 0.2), 140); };
+    const playNo = () => beep(160, 0.2, 'sawtooth');
 
-    document.getElementById('bgmBtn').onclick = () = {
+    document.getElementById('bgmBtn').onclick = () => {
       getAudio();
       isBgm = !isBgm;
       if (isBgm) {
         const notes = [261, 329, 392, 523, 440, 349, 392, 329];
         let idx = 0;
-        bgmId = setInterval(() = { beep(notes[idx % notes.length], 0.15, 'sine'); idx++; }, 260);
+        bgmId = setInterval(() => { beep(notes[idx % notes.length], 0.15, 'sine'); idx++; }, 260);
         document.getElementById('bgmBtn').innerText = '🔇 BGM 끄기';
       } else {
         clearInterval(bgmId);
@@ -111,7 +110,6 @@ body
     const lEff = document.getElementById('lEff').getContext('2d');
     const rEff = document.getElementById('rEff').getContext('2d');
 
-     JSON 데이터 불러오기
     async function initGame() {
       try {
         const res = await fetch('stages.json');
@@ -138,12 +136,12 @@ body
 
       const imgL = new Image();
       imgL.crossOrigin = 'anonymous';
-      imgL.onload = () = lCtx.drawImage(imgL, 0, 0, 420, 420);
+      imgL.onload = () => lCtx.drawImage(imgL, 0, 0, 420, 420);
       imgL.src = stageData.leftImage;
 
       const imgR = new Image();
       imgR.crossOrigin = 'anonymous';
-      imgR.onload = () = rCtx.drawImage(imgR, 0, 0, 420, 420);
+      imgR.onload = () => rCtx.drawImage(imgR, 0, 0, 420, 420);
       imgR.src = stageData.rightImage;
 
       lEff.clearRect(0,0,420,420);
@@ -154,15 +152,15 @@ body
     function checkHit(x, y) {
       getAudio();
       let hit = false;
-      diffs.forEach(d = {
+      diffs.forEach(d => {
         if (!d.found) {
           const dist = Math.hypot(d.x - x, d.y - y);
-          if (dist = d.r + 12) {
+          if (dist <= d.r + 12) {
             d.found = true;
             hit = true;
-            [lEff, rEff].forEach(ctx = {
+            [lEff, rEff].forEach(ctx => {
               ctx.strokeStyle = '#ff4757'; ctx.lineWidth = 4;
-              ctx.beginPath(); ctx.arc(d.x, d.y, d.r + 6, 0, Math.PI2); ctx.stroke();
+              ctx.beginPath(); ctx.arc(d.x, d.y, d.r + 6, 0, Math.PI*2); ctx.stroke();
             });
             playOk();
           }
@@ -174,20 +172,20 @@ body
         timer = Math.max(0, timer - 3);
       }
 
-      const remain = diffs.filter(d = !d.found).length;
+      const remain = diffs.filter(d => !d.found).length;
       document.getElementById('remainCount').innerText = remain;
 
       if (remain === 0) {
         clearInterval(timerId);
-        setTimeout(() = document.getElementById('clearPopup').style.display = 'block', 300);
+        setTimeout(() => document.getElementById('clearPopup').style.display = 'block', 300);
       }
     }
 
     function bind(canvas) {
-      canvas.onclick = (e) = {
+      canvas.onclick = (e) => {
         const rect = canvas.getBoundingClientRect();
-        const x = (e.clientX - rect.left)  (420  rect.width);
-        const y = (e.clientY - rect.top)  (420  rect.height);
+        const x = (e.clientX - rect.left) * (420 / rect.width);
+        const y = (e.clientY - rect.top) * (420 / rect.height);
         checkHit(x, y);
       };
     }
@@ -197,12 +195,12 @@ body
     function startTimer() {
       if (timerId) clearInterval(timerId);
       timer = 60;
-      timerId = setInterval(() = {
+      timerId = setInterval(() => {
         timer -= 0.1;
-        const pct = Math.max(0, (timer  60)  100);
+        const pct = Math.max(0, (timer / 60) * 100);
         document.getElementById('timerFill').style.width = pct + '%';
         document.getElementById('timerEle').style.left = pct + '%';
-        if (timer = 0) {
+        if (timer <= 0) {
           clearInterval(timerId);
           alert('시간 초과! 다시 도전하세요.');
           loadStage(curStage);
@@ -210,12 +208,12 @@ body
       }, 100);
     }
 
-    document.getElementById('nextBtn').onclick = () = {
+    document.getElementById('nextBtn').onclick = () => {
       document.getElementById('clearPopup').style.display = 'none';
       loadStage(curStage + 1);
     };
 
     window.onload = initGame;
-  script
-body
-html
+  </script>
+</body>
+</html>
