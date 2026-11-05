@@ -114,7 +114,7 @@
       transition: left 0.1s linear;
     }
 
-    /* 관리자 사진 등록 팝업 모달 */
+    /* 관리자 사진 등록 모달 */
     .admin-modal {
       display: none;
       position: fixed;
@@ -149,30 +149,30 @@
     }
     .btn-apply { background: #2ed573; color: white; border: none; padding: 10px 18px; border-radius: 8px; font-weight: bold; cursor: pointer; }
 
+    /* 팝업 창 (성공 / 시간초과) */
     .popup {
       display: none;
       position: fixed;
       top: 50%; left: 50%;
       transform: translate(-50%, -50%);
       background: #fff;
-      padding: 30px 50px;
+      padding: 28px 40px;
       border-radius: 20px;
       box-shadow: 0 15px 40px rgba(0,0,0,0.25);
       text-align: center;
       z-index: 90;
+      min-width: 320px;
     }
-    .popup h2 { font-size: 28px; color: #ff4757; margin-bottom: 8px; }
-    .popup button {
-      margin-top: 16px;
-      padding: 10px 24px;
-      background: #ff4757;
-      color: #fff;
-      font-size: 16px;
-      font-weight: 800;
-      border: none;
-      border-radius: 10px;
-      cursor: pointer;
+    .popup h2 { font-size: 26px; margin-bottom: 8px; }
+    .popup p { font-size: 15px; color: #555; }
+    .popup-btns {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 18px;
     }
+    .btn-next { background: #ff4757; color: white; border: none; padding: 10px 20px; border-radius: 10px; font-weight: bold; cursor: pointer; }
+    .btn-retry { background: #747d8c; color: white; border: none; padding: 10px 20px; border-radius: 10px; font-weight: bold; cursor: pointer; }
   </style>
 </head>
 <body>
@@ -204,11 +204,11 @@
     <div class="t-ele" id="tEle">🐘</div>
   </div>
 
-  <!-- 관리자 사진 업로드 창 -->
+  <!-- 관리자 사진 업로드 모달 -->
   <div class="admin-modal" id="adminModal">
     <div class="modal-box">
       <h3>🖼️ 관리자 사진 등록 & 5곳 자동 변형</h3>
-      <p style="font-size:12px; color:#666; margin-bottom:12px;">원하는 사진을 넣으면 오른쪽 그림에 5곳의 차이점과 판정 좌표를 자동 생성합니다.</p>
+      <p style="font-size:12px; color:#666; margin-bottom:12px;">어떤 사진이든 첨부하면 오른쪽 그림에 5곳의 차이점과 판정 좌표를 자동 생성합니다.</p>
       
       <label>1. 사진 파일 첨부 (JPG/PNG):</label>
       <input type="file" id="photoInput" accept="image/*">
@@ -229,10 +229,23 @@
     </div>
   </div>
 
-  <div class="popup" id="pop">
-    <h2>참 잘했어요! 🎉</h2>
+  <!-- 클리어 팝업 -->
+  <div class="popup" id="popClear">
+    <h2 style="color:#ff4757;">참 잘했어요! 🎉</h2>
     <p>5곳의 차이점을 모두 찾았습니다!</p>
-    <button id="nextBtn">다음 단계 도전</button>
+    <div class="popup-btns">
+      <button class="btn-next" id="clearNextBtn">다음 단계 도전</button>
+    </div>
+  </div>
+
+  <!-- [추가] 시간 초과 (정답 공개) 팝업 -->
+  <div class="popup" id="popTimeout">
+    <h2 style="color:#e67e22;">⏰ 시간 초과! (정답 공개)</h2>
+    <p>못 찾으신 곳을 빨간 원으로 모두 표시했습니다.<br>화면의 정답을 확인해보세요!</p>
+    <div class="popup-btns">
+      <button class="btn-retry" id="timeoutRetryBtn">🔄 다시 도전</button>
+      <button class="btn-next" id="timeoutNextBtn">⏩ 다음 단계</button>
+    </div>
   </div>
 
   <script>
@@ -249,12 +262,13 @@
         o.type = t; o.frequency.value = f;
         g.gain.setValueAtTime(0.08, c.currentTime);
         g.gain.exponentialRampToValueAtTime(0.001, c.currentTime + d);
-        osc = o; osc.connect(g); g.connect(c.destination);
-        osc.start(); osc.stop(c.currentTime + d);
+        o.connect(g); g.connect(c.destination);
+        o.start(); o.stop(c.currentTime + d);
       } catch (e) {}
     }
     const sOk = () => { beep(523, 0.1, 'triangle'); setTimeout(() => beep(659, 0.1), 70); setTimeout(() => beep(783, 0.2), 140); };
     const sNo = () => beep(160, 0.2, 'sawtooth');
+    const sTimeOut = () => { beep(350, 0.15, 'sawtooth'); setTimeout(() => beep(250, 0.3, 'sawtooth'), 120); };
 
     document.getElementById('bgmBtn').onclick = () => {
       getA();
@@ -274,26 +288,30 @@
     let tmr = 60;
     let maxTime = 60;
     let tid = null;
-    let uploadedImage = null; // 관리자가 올린 이미지 객체
+    let isGameOver = false; // 시간 초과나 클리어 시 클릭 차단
+    let uploadedImage = null;
 
     const lC = document.getElementById('lView').getContext('2d');
     const rC = document.getElementById('rView').getContext('2d');
     const lE = document.getElementById('lEff').getContext('2d');
     const rE = document.getElementById('rEff').getContext('2d');
 
-    // [핵심] 사진을 분석하여 5곳을 변형하고 좌표를 잡는 엔진
+    // 사진 5곳 변형 및 렌더링
     function processAndRender(stage) {
       cStg = stage;
       maxTime = Math.max(35, 65 - (stage * 5));
       tmr = maxTime;
+      isGameOver = false;
 
-      // 캔버스 초기화
+      // 팝업 닫기
+      document.getElementById('popClear').style.display = 'none';
+      document.getElementById('popTimeout').style.display = 'none';
+
       lC.clearRect(0, 0, 440, 440);
       rC.clearRect(0, 0, 440, 440);
       lE.clearRect(0, 0, 440, 440);
       rE.clearRect(0, 0, 440, 440);
 
-      // 사진이 없으면 기본 샘플 사진 로드, 있으면 관리자 업로드 사진 사용
       if (uploadedImage) {
         lC.drawImage(uploadedImage, 0, 0, 440, 440);
         rC.drawImage(uploadedImage, 0, 0, 440, 440);
@@ -302,54 +320,41 @@
         drawDefaultIllustration(rC);
       }
 
-      // 단계별 5개 영역 판정 반경 (단계가 올라갈수록 작아짐)
       const radius = Math.max(16, 36 - (stage * 4));
-
-      // 사진 위의 5곳 분산 좌표 선정
       const basePoints = [
-        { x: 90,  y: 90 },   // 좌상단
-        { x: 340, y: 100 },  // 우상단
-        { x: 220, y: 220 },  // 중앙
-        { x: 110, y: 340 },  // 좌하단
-        { x: 330, y: 330 }   // 우하단
+        { x: 90,  y: 90 },
+        { x: 340, y: 100 },
+        { x: 220, y: 220 },
+        { x: 110, y: 340 },
+        { x: 330, y: 330 }
       ];
 
       diffs = [];
 
-      // 오른쪽 사진의 5개 영역을 실제 픽셀 단위로 변형
       basePoints.forEach((pt, idx) => {
         diffs.push({ id: idx + 1, x: pt.x, y: pt.y, r: radius, f: false });
 
-        // 해당 영역의 픽셀 데이터 추출
         const imgData = rC.getImageData(pt.x - radius, pt.y - radius, radius * 2, radius * 2);
         const d = imgData.data;
 
-        // 난이도별 변형 알고리즘
         for (let i = 0; i < d.length; i += 4) {
           if (stage === 1) {
-            // 1단계: 강한 색상 반전 (쉽게 보임)
             d[i] = 255 - d[i];
             d[i + 1] = (d[i + 1] + 120) % 255;
           } else if (stage === 2) {
-            // 2단계: 색조 스왑 (적당한 차이)
             let temp = d[i];
             d[i] = d[i + 2];
             d[i + 2] = temp;
           } else if (stage === 3) {
-            // 3단계: 명도 및 채도 변형
             d[i] = Math.min(255, d[i] * 1.5);
             d[i + 1] = Math.max(0, d[i + 1] * 0.6);
           } else if (stage === 4) {
-            // 4단계: 소프트 블러 & 미세 변형
             d[i] = (d[i] + 40) % 255;
           } else {
-            // 5단계: 초미세 톤 차이 (달인급)
             d[i] = Math.min(255, d[i] + 25);
             d[i + 1] = Math.min(255, d[i + 1] + 25);
           }
         }
-
-        // 변형된 픽셀을 오른쪽 캔버스에 덮어쓰기
         rC.putImageData(imgData, pt.x - radius, pt.y - radius);
       });
 
@@ -358,7 +363,6 @@
       startT(maxTime);
     }
 
-    // 기본 샘플 일러스트 (사진 첨부 전 표시)
     function drawDefaultIllustration(ctx) {
       ctx.fillStyle = "#87ceeb"; ctx.fillRect(0, 0, 440, 250);
       ctx.fillStyle = "#6ab04c";
@@ -366,22 +370,30 @@
       ctx.beginPath(); ctx.arc(350, 290, 180, 0, Math.PI, true); ctx.fill();
       ctx.fillStyle = "#badc58"; ctx.fillRect(0, 240, 440, 200);
 
-      // 해
       ctx.fillStyle = "#ff5252"; ctx.beginPath(); ctx.arc(90, 90, 28, 0, Math.PI*2); ctx.fill();
-      // 집
       ctx.fillStyle = "#f6e58d"; ctx.fillRect(300, 150, 80, 60);
       ctx.fillStyle = "#eb3b5a"; ctx.beginPath(); ctx.moveTo(290, 150); ctx.lineTo(340, 110); ctx.lineTo(390, 150); ctx.fill();
-      // 코끼리
       ctx.fillStyle = "#d1d8e0"; ctx.beginPath(); ctx.arc(220, 220, 35, 0, Math.PI*2); ctx.fill();
       ctx.fillStyle = "#3867d6"; ctx.fillRect(195, 250, 50, 50);
-      // 채소 및 꽃
       ctx.fillStyle = "#795548"; ctx.beginPath(); ctx.ellipse(110, 350, 40, 14, 0, 0, Math.PI*2); ctx.fill();
       ctx.fillStyle = "#f1f2f6"; ctx.beginPath(); ctx.arc(110, 335, 20, 0, Math.PI*2); ctx.fill();
       ctx.fillStyle = "#ff9ff3"; ctx.beginPath(); ctx.arc(330, 330, 16, 0, Math.PI*2); ctx.fill();
     }
 
+    // 빨간 동그라미 그리기 함수
+    function drawFoundCircle(x, y, r, isMissed = false) {
+      [lE, rE].forEach(c => {
+        c.strokeStyle = isMissed ? '#e67e22' : '#ff4757'; // 못 찾은 정답은 주황빛 빨강으로 강조
+        c.lineWidth = 4;
+        c.beginPath();
+        c.arc(x, y, r + 6, 0, Math.PI * 2);
+        c.stroke();
+      });
+    }
+
     // 클릭 감지 및 정답 판정
     function check(x, y) {
+      if (isGameOver) return;
       getA();
       let hit = false;
       diffs.forEach(d => {
@@ -390,13 +402,7 @@
           if (dist <= d.r + 14) {
             d.f = true;
             hit = true;
-            [lE, rE].forEach(c => {
-              c.strokeStyle = '#ff4757';
-              c.lineWidth = 4;
-              c.beginPath();
-              c.arc(d.x, d.y, d.r + 6, 0, Math.PI * 2);
-              c.stroke();
-            });
+            drawFoundCircle(d.x, d.y, d.r, false);
             sOk();
           }
         }
@@ -411,9 +417,27 @@
       document.getElementById('remCount').innerText = rem;
 
       if (rem === 0) {
+        isGameOver = true;
         clearInterval(tid);
-        setTimeout(() => document.getElementById('pop').style.display = 'block', 300);
+        setTimeout(() => document.getElementById('popClear').style.display = 'block', 300);
       }
+    }
+
+    // [핵심] 시간 초과 시 모든 정답을 공개하는 로직
+    function handleTimeout() {
+      isGameOver = true;
+      clearInterval(tid);
+      sTimeOut();
+
+      // 아직 못 찾은 모든 정답 위치에 동그라미 표시 (정답 공개!)
+      diffs.forEach(d => {
+        drawFoundCircle(d.x, d.y, d.r, !d.f);
+      });
+
+      // 0.3초 후 정답 공개 팝업 표시
+      setTimeout(() => {
+        document.getElementById('popTimeout').style.display = 'block';
+      }, 300);
     }
 
     function startT(max) {
@@ -423,10 +447,10 @@
         const p = Math.max(0, (tmr / max) * 100);
         document.getElementById('tFill').style.width = p + '%';
         document.getElementById('tEle').style.left = p + '%';
+        
+        // 시간 초과 도달 시 정답 공개 함수 실행!
         if (tmr <= 0) {
-          clearInterval(tid);
-          alert('시간 초과! 다시 도전해보세요.');
-          processAndRender(cStg);
+          handleTimeout();
         }
       }, 100);
     }
@@ -440,12 +464,11 @@
     bind(document.getElementById('lEff'));
     bind(document.getElementById('rEff'));
 
-    // 관리자 모달 제어
+    // 관리자 모달
     document.getElementById('openAdminBtn').onclick = () => {
       document.getElementById('adminModal').style.display = 'flex';
     };
 
-    // 사진 적용 버튼 클릭 시
     document.getElementById('applyPhotoBtn').onclick = () => {
       const fileInput = document.getElementById('photoInput');
       const stage = parseInt(document.getElementById('stageSelect').value, 10);
@@ -468,8 +491,21 @@
       }
     };
 
-    document.getElementById('nextBtn').onclick = () => {
-      document.getElementById('pop').style.display = 'none';
+    // 팝업 버튼 이벤트
+    document.getElementById('clearNextBtn').onclick = () => {
+      document.getElementById('popClear').style.display = 'none';
+      processAndRender(cStg < 5 ? cStg + 1 : 1);
+    };
+
+    // 시간 초과 팝업: 다시 도전
+    document.getElementById('timeoutRetryBtn').onclick = () => {
+      document.getElementById('popTimeout').style.display = 'none';
+      processAndRender(cStg);
+    };
+
+    // 시간 초과 팝업: 다음 단계
+    document.getElementById('timeoutNextBtn').onclick = () => {
+      document.getElementById('popTimeout').style.display = 'none';
       processAndRender(cStg < 5 ? cStg + 1 : 1);
     };
 
