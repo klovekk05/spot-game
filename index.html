@@ -3,217 +3,477 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>온라인 틀린 그림 찾기 게임</title>
+  <title>AI 틀린 그림 찾기 게임</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: sans-serif; background: #fdf6ec; display: flex; flex-direction: column; align-items: center; min-height: 100vh; padding: 10px; }
-    header { width: 100%; max-width: 900px; display: flex; justify-content: space-between; align-items: center; padding: 10px 0; }
-    .badge { background: #ff4757; color: white; padding: 6px 16px; border-radius: 20px; font-weight: bold; font-size: 18px; }
-    .score { font-size: 18px; font-weight: bold; }
+    body {
+      font-family: 'Pretendard', -apple-system, sans-serif;
+      background: #fbf7ee;
+      color: #2d3436;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      user-select: none;
+      padding: 10px;
+    }
+    header {
+      width: 100%;
+      max-width: 940px;
+      padding: 10px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .pill {
+      background: #ff4757;
+      color: white;
+      font-size: 18px;
+      font-weight: 800;
+      padding: 6px 18px;
+      border-radius: 30px;
+      box-shadow: 0 4px 10px rgba(255, 71, 87, 0.3);
+    }
+    .score { font-size: 18px; font-weight: 700; }
     .score span { color: #ff4757; font-size: 24px; }
-    .btn { padding: 8px 14px; background: white; border: 2px solid #ddd; border-radius: 10px; font-weight: bold; cursor: pointer; }
-    
-    .game-board { display: flex; gap: 16px; margin-top: 10px; background: white; padding: 16px; border-radius: 20px; box-shadow: 0 4px 20px rgba(0,0,0,0.06); }
-    .card { position: relative; width: 420px; height: 420px; border-radius: 12px; overflow: hidden; border: 3px solid #eee; cursor: crosshair; }
-    canvas { position: absolute; top:0; left:0; width:100%; height:100%; }
-    .label { position: absolute; top:10px; left:10px; background: rgba(0,0,0,0.6); color:white; padding:4px 8px; border-radius:6px; font-size:12px; pointer-events: none; }
+    .btn {
+      padding: 8px 14px;
+      font-size: 13px;
+      font-weight: 700;
+      border: 2px solid #e0d6c3;
+      border-radius: 10px;
+      background: #fff;
+      cursor: pointer;
+      margin-left: 4px;
+      transition: all 0.2s;
+    }
+    .btn:hover { background: #f1ede2; }
+    .btn-admin { background: #3742fa; color: white; border-color: #3742fa; }
+    .btn-admin:hover { background: #2f3542; }
 
-    .timer-wrap { width: 100%; max-width: 870px; height: 18px; background: #e0d6c3; border-radius: 9px; margin-top: 15px; position: relative; }
-    .timer-fill { height: 100%; width: 100%; background: #ffa502; border-radius: 9px; transition: width 0.1s linear; }
-    .timer-ele { position: absolute; top: -20px; left: 100%; transform: translateX(-50%); font-size: 26px; transition: left 0.1s linear; }
+    .board {
+      display: flex;
+      gap: 16px;
+      background: #fff;
+      padding: 16px;
+      border-radius: 20px;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.06);
+      margin-top: 6px;
+    }
+    .card {
+      position: relative;
+      width: 440px;
+      height: 440px;
+      border-radius: 14px;
+      overflow: hidden;
+      border: 3px solid #eee5d3;
+      background: #eef2f3;
+      cursor: crosshair;
+    }
+    canvas {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      display: block;
+    }
+    .tag {
+      position: absolute;
+      top: 10px; left: 10px;
+      background: rgba(45, 52, 54, 0.8);
+      color: #fff;
+      font-size: 12px;
+      font-weight: 700;
+      padding: 4px 8px;
+      border-radius: 6px;
+      pointer-events: none;
+      z-index: 10;
+    }
 
-    .popup { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: white; padding: 30px 50px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); text-align: center; }
+    .t-wrap {
+      width: 100%;
+      max-width: 890px;
+      height: 20px;
+      background: #e9dfcb;
+      border-radius: 10px;
+      margin-top: 16px;
+      position: relative;
+    }
+    .t-fill {
+      height: 100%;
+      width: 100%;
+      background: #ffa502;
+      border-radius: 10px;
+      transition: width 0.1s linear;
+    }
+    .t-ele {
+      position: absolute;
+      top: -22px;
+      left: 100%;
+      transform: translateX(-50%);
+      font-size: 28px;
+      transition: left 0.1s linear;
+    }
+
+    /* 관리자 사진 등록 팝업 모달 */
+    .admin-modal {
+      display: none;
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.6);
+      justify-content: center;
+      align-items: center;
+      z-index: 100;
+    }
+    .modal-box {
+      background: #fff;
+      padding: 24px;
+      border-radius: 16px;
+      width: 90%;
+      max-width: 440px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.25);
+    }
+    .modal-box h3 { margin-bottom: 12px; font-size: 18px; }
+    .modal-box label { display: block; margin: 12px 0 4px; font-weight: bold; font-size: 14px; }
+    .modal-box input[type="file"], .modal-box select {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+    }
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      margin-top: 20px;
+    }
+    .btn-apply { background: #2ed573; color: white; border: none; padding: 10px 18px; border-radius: 8px; font-weight: bold; cursor: pointer; }
+
+    .popup {
+      display: none;
+      position: fixed;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      background: #fff;
+      padding: 30px 50px;
+      border-radius: 20px;
+      box-shadow: 0 15px 40px rgba(0,0,0,0.25);
+      text-align: center;
+      z-index: 90;
+    }
+    .popup h2 { font-size: 28px; color: #ff4757; margin-bottom: 8px; }
+    .popup button {
+      margin-top: 16px;
+      padding: 10px 24px;
+      background: #ff4757;
+      color: #fff;
+      font-size: 16px;
+      font-weight: 800;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
 
   <header>
-    <div class="badge" id="stageBadge">1단계</div>
-    <div class="score">남은 곳: <span id="remainCount">5</span> / 5</div>
+    <div class="pill" id="stgBadge">1단계</div>
+    <div class="score">남은 곳: <span id="remCount">5</span> / 5</div>
     <div>
       <button class="btn" id="bgmBtn">🎵 BGM</button>
-      <a href="admin.html" class="btn" style="text-decoration:none; color:black;">⚙️ 관리자 모드</a>
+      <button class="btn btn-admin" id="openAdminBtn">⚙️ 관리자 사진 등록</button>
     </div>
   </header>
 
-  <div class="game-board">
+  <div class="board">
     <div class="card">
-      <div class="label">원본 (Left)</div>
-      <canvas id="lView" width="420" height="420"></canvas>
-      <canvas id="lEff" width="420" height="420"></canvas>
+      <div class="tag">원본 (Left)</div>
+      <canvas id="lView" width="440" height="440" style="z-index:1"></canvas>
+      <canvas id="lEff" width="440" height="440" style="z-index:2"></canvas>
     </div>
     <div class="card">
-      <div class="label">틀린그림 (Right)</div>
-      <canvas id="rView" width="420" height="420"></canvas>
-      <canvas id="rEff" width="420" height="420"></canvas>
+      <div class="tag">틀린그림 (Right)</div>
+      <canvas id="rView" width="440" height="440" style="z-index:1"></canvas>
+      <canvas id="rEff" width="440" height="440" style="z-index:2"></canvas>
     </div>
   </div>
 
-  <div class="timer-wrap">
-    <div class="timer-fill" id="timerFill"></div>
-    <div class="timer-ele" id="timerEle">🐘</div>
+  <div class="t-wrap">
+    <div class="t-fill" id="tFill"></div>
+    <div class="t-ele" id="tEle">🐘</div>
   </div>
 
-  <div class="popup" id="clearPopup">
-    <h2 style="color:#ff4757; margin-bottom: 8px;">참 잘했어요! 🎉</h2>
-    <p>5곳을 모두 찾았습니다!</p>
-    <button class="btn" style="background:#ff4757; color:white; margin-top:14px;" id="nextBtn">다음 단계 도전</button>
+  <!-- 관리자 사진 업로드 창 -->
+  <div class="admin-modal" id="adminModal">
+    <div class="modal-box">
+      <h3>🖼️ 관리자 사진 등록 & 5곳 자동 변형</h3>
+      <p style="font-size:12px; color:#666; margin-bottom:12px;">원하는 사진을 넣으면 오른쪽 그림에 5곳의 차이점과 판정 좌표를 자동 생성합니다.</p>
+      
+      <label>1. 사진 파일 첨부 (JPG/PNG):</label>
+      <input type="file" id="photoInput" accept="image/*">
+
+      <label>2. 난이도 단계 선택:</label>
+      <select id="stageSelect">
+        <option value="1">1단계 (쉬움 - 뚜렷한 색상 변화)</option>
+        <option value="2">2단계 (보통 - 사물 반전/변형)</option>
+        <option value="3">3단계 (중급 - 톤 및 텍스처 변화)</option>
+        <option value="4">4단계 (고급 - 형태 미세 왜곡)</option>
+        <option value="5">5단계 (달인 - 초미세 디테일 차이)</option>
+      </select>
+
+      <div class="modal-actions">
+        <button class="btn" onclick="document.getElementById('adminModal').style.display='none'">닫기</button>
+        <button class="btn-apply" id="applyPhotoBtn">✨ 5곳 자동 변형 적용</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="popup" id="pop">
+    <h2>참 잘했어요! 🎉</h2>
+    <p>5곳의 차이점을 모두 찾았습니다!</p>
+    <button id="nextBtn">다음 단계 도전</button>
   </div>
 
   <script>
-    let audioCtx = null;
-    let isBgm = false;
-    let bgmId = null;
-
-    function getAudio() {
-      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      if (audioCtx.state === 'suspended') audioCtx.resume();
-      return audioCtx;
+    // 음향 시스템
+    let actx = null, bgm = false, bid = null;
+    function getA() {
+      if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)();
+      if (actx.state === 'suspended') actx.resume();
+      return actx;
     }
-    function beep(f, d, t='sine') {
+    function beep(f, d, t = 'sine') {
       try {
-        const ctx = getAudio();
-        const osc = ctx.createOscillator();
-        const g = ctx.createGain();
-        osc.type = t; osc.frequency.value = f;
-        g.gain.setValueAtTime(0.08, ctx.currentTime);
-        g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + d);
-        osc.connect(g); g.connect(ctx.destination);
-        osc.start(); osc.stop(ctx.currentTime + d);
-      } catch(e){}
+        let c = getA(), o = c.createOscillator(), g = c.createGain();
+        o.type = t; o.frequency.value = f;
+        g.gain.setValueAtTime(0.08, c.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.001, c.currentTime + d);
+        osc = o; osc.connect(g); g.connect(c.destination);
+        osc.start(); osc.stop(c.currentTime + d);
+      } catch (e) {}
     }
-    const playOk = () => { beep(523, 0.1); setTimeout(() => beep(659, 0.1), 70); setTimeout(() => beep(783, 0.2), 140); };
-    const playNo = () => beep(160, 0.2, 'sawtooth');
+    const sOk = () => { beep(523, 0.1, 'triangle'); setTimeout(() => beep(659, 0.1), 70); setTimeout(() => beep(783, 0.2), 140); };
+    const sNo = () => beep(160, 0.2, 'sawtooth');
 
     document.getElementById('bgmBtn').onclick = () => {
-      getAudio();
-      isBgm = !isBgm;
-      if (isBgm) {
-        const notes = [261, 329, 392, 523, 440, 349, 392, 329];
-        let idx = 0;
-        bgmId = setInterval(() => { beep(notes[idx % notes.length], 0.15, 'sine'); idx++; }, 260);
+      getA();
+      bgm = !bgm;
+      if (bgm) {
+        let n = [261, 329, 392, 523, 440, 349, 392, 329], i = 0;
+        bid = setInterval(() => { beep(n[i % n.length], 0.15, 'sine'); i++; }, 260);
         document.getElementById('bgmBtn').innerText = '🔇 BGM 끄기';
       } else {
-        clearInterval(bgmId);
+        clearInterval(bid);
         document.getElementById('bgmBtn').innerText = '🎵 BGM';
       }
     };
 
-    let curStage = 1;
-    let allStages = {};
+    let cStg = 1;
     let diffs = [];
-    let timer = 60;
-    let timerId = null;
+    let tmr = 60;
+    let maxTime = 60;
+    let tid = null;
+    let uploadedImage = null; // 관리자가 올린 이미지 객체
 
-    const lCtx = document.getElementById('lView').getContext('2d');
-    const rCtx = document.getElementById('rView').getContext('2d');
-    const lEff = document.getElementById('lEff').getContext('2d');
-    const rEff = document.getElementById('rEff').getContext('2d');
+    const lC = document.getElementById('lView').getContext('2d');
+    const rC = document.getElementById('rView').getContext('2d');
+    const lE = document.getElementById('lEff').getContext('2d');
+    const rE = document.getElementById('rEff').getContext('2d');
 
-    async function initGame() {
-      try {
-        const res = await fetch('stages.json');
-        const data = await res.json();
-        allStages = data.stages;
-        loadStage(1);
-      } catch (err) {
-        alert('stages.json 파일을 불러오지 못했습니다. admin.html에서 문제를 먼저 등록해보세요!');
+    // [핵심] 사진을 분석하여 5곳을 변형하고 좌표를 잡는 엔진
+    function processAndRender(stage) {
+      cStg = stage;
+      maxTime = Math.max(35, 65 - (stage * 5));
+      tmr = maxTime;
+
+      // 캔버스 초기화
+      lC.clearRect(0, 0, 440, 440);
+      rC.clearRect(0, 0, 440, 440);
+      lE.clearRect(0, 0, 440, 440);
+      rE.clearRect(0, 0, 440, 440);
+
+      // 사진이 없으면 기본 샘플 사진 로드, 있으면 관리자 업로드 사진 사용
+      if (uploadedImage) {
+        lC.drawImage(uploadedImage, 0, 0, 440, 440);
+        rC.drawImage(uploadedImage, 0, 0, 440, 440);
+      } else {
+        drawDefaultIllustration(lC);
+        drawDefaultIllustration(rC);
       }
+
+      // 단계별 5개 영역 판정 반경 (단계가 올라갈수록 작아짐)
+      const radius = Math.max(16, 36 - (stage * 4));
+
+      // 사진 위의 5곳 분산 좌표 선정
+      const basePoints = [
+        { x: 90,  y: 90 },   // 좌상단
+        { x: 340, y: 100 },  // 우상단
+        { x: 220, y: 220 },  // 중앙
+        { x: 110, y: 340 },  // 좌하단
+        { x: 330, y: 330 }   // 우하단
+      ];
+
+      diffs = [];
+
+      // 오른쪽 사진의 5개 영역을 실제 픽셀 단위로 변형
+      basePoints.forEach((pt, idx) => {
+        diffs.push({ id: idx + 1, x: pt.x, y: pt.y, r: radius, f: false });
+
+        // 해당 영역의 픽셀 데이터 추출
+        const imgData = rC.getImageData(pt.x - radius, pt.y - radius, radius * 2, radius * 2);
+        const d = imgData.data;
+
+        // 난이도별 변형 알고리즘
+        for (let i = 0; i < d.length; i += 4) {
+          if (stage === 1) {
+            // 1단계: 강한 색상 반전 (쉽게 보임)
+            d[i] = 255 - d[i];
+            d[i + 1] = (d[i + 1] + 120) % 255;
+          } else if (stage === 2) {
+            // 2단계: 색조 스왑 (적당한 차이)
+            let temp = d[i];
+            d[i] = d[i + 2];
+            d[i + 2] = temp;
+          } else if (stage === 3) {
+            // 3단계: 명도 및 채도 변형
+            d[i] = Math.min(255, d[i] * 1.5);
+            d[i + 1] = Math.max(0, d[i + 1] * 0.6);
+          } else if (stage === 4) {
+            // 4단계: 소프트 블러 & 미세 변형
+            d[i] = (d[i] + 40) % 255;
+          } else {
+            // 5단계: 초미세 톤 차이 (달인급)
+            d[i] = Math.min(255, d[i] + 25);
+            d[i + 1] = Math.min(255, d[i + 1] + 25);
+          }
+        }
+
+        // 변형된 픽셀을 오른쪽 캔버스에 덮어쓰기
+        rC.putImageData(imgData, pt.x - radius, pt.y - radius);
+      });
+
+      document.getElementById('stgBadge').innerText = `${stage}단계`;
+      document.getElementById('remCount').innerText = 5;
+      startT(maxTime);
     }
 
-    function loadStage(num) {
-      curStage = num;
-      const stageData = allStages[num];
-      if (!stageData) {
-        alert('🏆 모든 등록된 스테이지를 클리어하셨습니다!');
-        loadStage(1);
-        return;
-      }
+    // 기본 샘플 일러스트 (사진 첨부 전 표시)
+    function drawDefaultIllustration(ctx) {
+      ctx.fillStyle = "#87ceeb"; ctx.fillRect(0, 0, 440, 250);
+      ctx.fillStyle = "#6ab04c";
+      ctx.beginPath(); ctx.arc(100, 280, 160, 0, Math.PI, true); ctx.fill();
+      ctx.beginPath(); ctx.arc(350, 290, 180, 0, Math.PI, true); ctx.fill();
+      ctx.fillStyle = "#badc58"; ctx.fillRect(0, 240, 440, 200);
 
-      diffs = JSON.parse(JSON.stringify(stageData.differences));
-      document.getElementById('stageBadge').innerText = `${num}단계`;
-      document.getElementById('remainCount').innerText = 5;
-
-      const imgL = new Image();
-      imgL.crossOrigin = 'anonymous';
-      imgL.onload = () => lCtx.drawImage(imgL, 0, 0, 420, 420);
-      imgL.src = stageData.leftImage;
-
-      const imgR = new Image();
-      imgR.crossOrigin = 'anonymous';
-      imgR.onload = () => rCtx.drawImage(imgR, 0, 0, 420, 420);
-      imgR.src = stageData.rightImage;
-
-      lEff.clearRect(0,0,420,420);
-      rEff.clearRect(0,0,420,420);
-      startTimer();
+      // 해
+      ctx.fillStyle = "#ff5252"; ctx.beginPath(); ctx.arc(90, 90, 28, 0, Math.PI*2); ctx.fill();
+      // 집
+      ctx.fillStyle = "#f6e58d"; ctx.fillRect(300, 150, 80, 60);
+      ctx.fillStyle = "#eb3b5a"; ctx.beginPath(); ctx.moveTo(290, 150); ctx.lineTo(340, 110); ctx.lineTo(390, 150); ctx.fill();
+      // 코끼리
+      ctx.fillStyle = "#d1d8e0"; ctx.beginPath(); ctx.arc(220, 220, 35, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = "#3867d6"; ctx.fillRect(195, 250, 50, 50);
+      // 채소 및 꽃
+      ctx.fillStyle = "#795548"; ctx.beginPath(); ctx.ellipse(110, 350, 40, 14, 0, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = "#f1f2f6"; ctx.beginPath(); ctx.arc(110, 335, 20, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = "#ff9ff3"; ctx.beginPath(); ctx.arc(330, 330, 16, 0, Math.PI*2); ctx.fill();
     }
 
-    function checkHit(x, y) {
-      getAudio();
+    // 클릭 감지 및 정답 판정
+    function check(x, y) {
+      getA();
       let hit = false;
       diffs.forEach(d => {
-        if (!d.found) {
+        if (!d.f) {
           const dist = Math.hypot(d.x - x, d.y - y);
-          if (dist <= d.r + 12) {
-            d.found = true;
+          if (dist <= d.r + 14) {
+            d.f = true;
             hit = true;
-            [lEff, rEff].forEach(ctx => {
-              ctx.strokeStyle = '#ff4757'; ctx.lineWidth = 4;
-              ctx.beginPath(); ctx.arc(d.x, d.y, d.r + 6, 0, Math.PI*2); ctx.stroke();
+            [lE, rE].forEach(c => {
+              c.strokeStyle = '#ff4757';
+              c.lineWidth = 4;
+              c.beginPath();
+              c.arc(d.x, d.y, d.r + 6, 0, Math.PI * 2);
+              c.stroke();
             });
-            playOk();
+            sOk();
           }
         }
       });
 
       if (!hit) {
-        playNo();
-        timer = Math.max(0, timer - 3);
+        sNo();
+        tmr = Math.max(0, tmr - 3);
       }
 
-      const remain = diffs.filter(d => !d.found).length;
-      document.getElementById('remainCount').innerText = remain;
+      const rem = diffs.filter(d => !d.f).length;
+      document.getElementById('remCount').innerText = rem;
 
-      if (remain === 0) {
-        clearInterval(timerId);
-        setTimeout(() => document.getElementById('clearPopup').style.display = 'block', 300);
+      if (rem === 0) {
+        clearInterval(tid);
+        setTimeout(() => document.getElementById('pop').style.display = 'block', 300);
       }
     }
 
-    function bind(canvas) {
-      canvas.onclick = (e) => {
-        const rect = canvas.getBoundingClientRect();
-        const x = (e.clientX - rect.left) * (420 / rect.width);
-        const y = (e.clientY - rect.top) * (420 / rect.height);
-        checkHit(x, y);
+    function startT(max) {
+      if (tid) clearInterval(tid);
+      tid = setInterval(() => {
+        tmr -= 0.1;
+        const p = Math.max(0, (tmr / max) * 100);
+        document.getElementById('tFill').style.width = p + '%';
+        document.getElementById('tEle').style.left = p + '%';
+        if (tmr <= 0) {
+          clearInterval(tid);
+          alert('시간 초과! 다시 도전해보세요.');
+          processAndRender(cStg);
+        }
+      }, 100);
+    }
+
+    function bind(el) {
+      el.onclick = (e) => {
+        const r = el.getBoundingClientRect();
+        check((e.clientX - r.left) * (440 / r.width), (e.clientY - r.top) * (440 / r.height));
       };
     }
     bind(document.getElementById('lEff'));
     bind(document.getElementById('rEff'));
 
-    function startTimer() {
-      if (timerId) clearInterval(timerId);
-      timer = 60;
-      timerId = setInterval(() => {
-        timer -= 0.1;
-        const pct = Math.max(0, (timer / 60) * 100);
-        document.getElementById('timerFill').style.width = pct + '%';
-        document.getElementById('timerEle').style.left = pct + '%';
-        if (timer <= 0) {
-          clearInterval(timerId);
-          alert('시간 초과! 다시 도전하세요.');
-          loadStage(curStage);
-        }
-      }, 100);
-    }
-
-    document.getElementById('nextBtn').onclick = () => {
-      document.getElementById('clearPopup').style.display = 'none';
-      loadStage(curStage + 1);
+    // 관리자 모달 제어
+    document.getElementById('openAdminBtn').onclick = () => {
+      document.getElementById('adminModal').style.display = 'flex';
     };
 
-    window.onload = initGame;
+    // 사진 적용 버튼 클릭 시
+    document.getElementById('applyPhotoBtn').onclick = () => {
+      const fileInput = document.getElementById('photoInput');
+      const stage = parseInt(document.getElementById('stageSelect').value, 10);
+
+      if (fileInput.files && fileInput.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function (e) {
+          const img = new Image();
+          img.onload = function () {
+            uploadedImage = img;
+            document.getElementById('adminModal').style.display = 'none';
+            processAndRender(stage);
+          };
+          img.src = e.target.result;
+        };
+        reader.readAsDataURL(fileInput.files[0]);
+      } else {
+        document.getElementById('adminModal').style.display = 'none';
+        processAndRender(stage);
+      }
+    };
+
+    document.getElementById('nextBtn').onclick = () => {
+      document.getElementById('pop').style.display = 'none';
+      processAndRender(cStg < 5 ? cStg + 1 : 1);
+    };
+
+    window.onload = () => processAndRender(1);
   </script>
 </body>
 </html>
